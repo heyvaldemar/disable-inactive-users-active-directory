@@ -1,6 +1,6 @@
 # Automatically Disabling Inactive User Accounts in Active Directory
 
-# I present to you a script in the Windows PowerShell scripting language that will allow you to disable user accounts that have been inactive for a certain number of days and add a description with the date when the disconnect was performed.
+# I present a script in the Windows PowerShell scripting language that will allow you to disable user accounts that have been inactive for a certain number of days and add a description with the date when the disconnect was performed.
 # Disabled user accounts will be transferred to the appropriate organizational unit, and a log file will be created with a list of disabled user accounts.
 
 # You need to open the script in a text editor or Windows PowerShell ISE and change several values so that the script runs correctly in your organization.
