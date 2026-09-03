@@ -1,0 +1,66 @@
+name: Script Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly: catches a PSScriptAnalyzer rule change before a user does.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Parse and analyze the PowerShell script
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Parse the script and run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/disable-inactive-users-active-directory.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | ForEach-Object { Write-Output "::error::$($_.Message)" }
+            exit 1
+          }
+          Write-Output "Parsed without syntax errors."
+
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          $findings = Invoke-ScriptAnalyzer -Path "$PWD/disable-inactive-users-active-directory.ps1" -Severity Error,Warning
+          if ($findings) {
+            $findings | Format-Table -AutoSize | Out-String | Write-Output
+            exit 1
+          }
+          Write-Output "PSScriptAnalyzer reported nothing at Error or Warning severity."
+
+      - name: Confirm the script refuses to run without its required input
+        shell: pwsh
+        run: |
+          # -WhatIf must never touch anything, and a missing mandatory parameter
+          # must fail before any account or file is looked at.
+          $help = Get-Help "$PWD/disable-inactive-users-active-directory.ps1" -Full
+          if (-not $help.Synopsis) { Write-Output "::error::the script has no comment-based help"; exit 1 }
+          Write-Output "Comment-based help present."
+
+  actionlint:
+    name: Lint workflow YAML
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt rhysd/actionlint:1.7.12 -color

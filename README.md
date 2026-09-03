@@ -1,93 +1,77 @@
-# Automatically Disabling Inactive User Accounts in Active Directory
+# Disable inactive Active Directory accounts
 
-I present a script in the Windows PowerShell scripting language that will allow you to disable user accounts that have been inactive for a certain number of days and add a description with the date when the disconnect was performed.
-Disabled user accounts will be transferred to the appropriate organizational unit, and a log file will be created with a list of disabled user accounts.
+[![Script Verification](https://github.com/heyvaldemar/disable-inactive-users-active-directory/actions/workflows/verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/disable-inactive-users-active-directory/actions/workflows/verification.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-You need to open the script in a text editor or Windows PowerShell ISE and change several values so that the script runs correctly in your organization.
+Dormant accounts are the ones attackers like: nobody notices a login on an account nobody uses. This PowerShell script finds accounts that have not signed in for a given number of days, writes them to a CSV, disables them, stamps the date into the description, and moves them to a quarantine organizational unit.
 
-- In the variable “LogFolder”, you must specify the path to the folder where the log files will be created. These files will contain a list of disabled user accounts.
-- In the “OU” variable, you must specify the path to the organizational unit where your organization's user accounts are stored.
-- In the “InactiveUserOU” variable, you must specify the path to the organizational unit where disabled user accounts in your organization will be transferred.
-- In the variable “UnusedDays”, specify the days after inactive user accounts are disabled.
+## Getting started
 
-Automate script execution through the task scheduler. To do this, you need to create a service account under which the task will be launched and also delegate to this account the necessary permissions to the organizational unit where user accounts are stored.
+```powershell
+# 1. Clone
+git clone https://github.com/heyvaldemar/disable-inactive-users-active-directory
+cd disable-inactive-users-active-directory
 
-## Author
+# 2. See what would happen, and read the CSV it writes
+.\disable-inactive-users-active-directory.ps1 `
+  -SearchBase "OU=Users,DC=example,DC=com" `
+  -InactiveUserOU "OU=Disabled,OU=Users,DC=example,DC=com" `
+  -WhatIf
 
-hey everyone,
+# 3. Run it for real once the CSV looks right
+.\disable-inactive-users-active-directory.ps1 `
+  -SearchBase "OU=Users,DC=example,DC=com" `
+  -InactiveUserOU "OU=Disabled,OU=Users,DC=example,DC=com" `
+  -Days 90 -Confirm:$false
+```
 
-💾 I’ve been in the IT game for over 20 years, cutting my teeth with some big names like [IBM](https://www.linkedin.com/in/heyvaldemar/), [Thales](https://www.linkedin.com/in/heyvaldemar/), and [Amazon](https://www.linkedin.com/in/heyvaldemar/). These days, I wear the hat of a DevOps Consultant and Team Lead, but what really gets me going is Docker and container technology - I’m kind of obsessed!
+Needs the ActiveDirectory module (RSAT AD DS tools) and rights to disable and move user objects.
 
-💛 I have my own IT [blog](https://www.heyvaldemar.com/), where I’ve built a [community](https://discord.gg/AJQGCCBcqf) of DevOps enthusiasts who share my love for all things Docker, containers, and IT technologies in general. And to make sure everyone can jump on this awesome DevOps train, I write super detailed guides (seriously, they’re foolproof!) that help even newbies deploy and manage complex IT solutions.
+### What success looks like
 
-🚀 My dream is to empower every single person in the DevOps community to squeeze every last drop of potential out of Docker and container tech.
+```text
+17 dormant account(s) written to C:\Scripts\Disable-Inactive-Users\Log\Disable-Inactive-Users_2026-09-03_03-15-42.csv
+17 account(s) disabled and moved to OU=Disabled,OU=Users,DC=example,DC=com
+```
 
-🐳 As a [Docker Captain](https://www.docker.com/captains/vladimir-mikhalev/), I’m stoked to share my knowledge, experiences, and a good dose of passion for the tech. My aim is to encourage learning, innovation, and growth, and to inspire the next generation of IT whizz-kids to push Docker and container tech to its limits.
+The CSV carries the display name, the distinguished name, the creation date, the last logon date (or `never`), and the previous description, so the change can be reviewed or reversed.
 
-Let’s do this together!
+## Parameters
 
-## My 2D Portfolio
+| Parameter          | Default | What it does |
+|--------------------|---------|--------------|
+| `-SearchBase`      | required | Organizational unit to search. |
+| `-InactiveUserOU`  | required | Where disabled accounts are moved. |
+| `-Days`            | `90` | An account is dormant when its last logon is older than this. |
+| `-LogFolder`       | `C:\Scripts\Disable-Inactive-Users\Log` | Where the CSV report is written. |
 
-🕹️ Click into [sre.gg](https://www.sre.gg/) — my virtual space is a 2D pixel-art portfolio inviting you to interact with elements that encapsulate the milestones of my DevOps career.
+Both organizational units are mandatory on purpose. A script that disables accounts should never inherit someone else's default and run against the wrong directory.
 
-## My Courses
+## Two things to know before you schedule it
 
-🎓 Dive into my [comprehensive IT courses](https://www.heyvaldemar.com/courses/) designed for enthusiasts and professionals alike. Whether you're looking to master Docker, conquer Kubernetes, or advance your DevOps skills, my courses provide a structured pathway to enhancing your technical prowess.
+**`lastLogonTimestamp` replicates lazily.** Active Directory updates it at most once every 9 to 14 days by default, so a threshold under 30 days will flag people who logged in last week. Ninety days is the safe floor for an unattended job.
 
-🔑 [Each course](https://www.udemy.com/user/heyvaldemar/) is built from the ground up with real-world scenarios in mind, ensuring that you gain practical knowledge and hands-on experience. From beginners to seasoned professionals, there's something here for everyone to elevate their IT skills.
+**Some service accounts never stamp a logon** in a way the directory records. They look dormant here and are not. Read the CSV on the first run and exclude what should stay enabled.
 
-## My Services
+## Production checklist
 
-💼 Take a look at my [service catalog](https://www.heyvaldemar.com/services/) and find out how we can make your technological life better. Whether it's increasing the efficiency of your IT infrastructure, advancing your career, or expanding your technological horizons — I'm here to help you achieve your goals. From DevOps transformations to building gaming computers — let's make your technology unparalleled!
+- [ ] **Run with `-WhatIf` first** and read the CSV. This is the whole review.
+- [ ] **Create the quarantine OU before the first run** and check that no group policy or license assignment is scoped to it in a way that surprises you.
+- [ ] **Keep the CSVs.** They are the record of who was disabled and when, and the thing you reach for when someone comes back from a year of leave.
+- [ ] **Exclude accounts protected by AdminSDHolder** and break-glass administrators from the search base.
 
-## Patreon Exclusives
+## Testing
 
-🏆 Join my [Patreon](https://www.patreon.com/heyvaldemar) and dive deep into the world of Docker and DevOps with exclusive content tailored for IT enthusiasts and professionals. As your experienced guide, I offer a range of membership tiers designed to suit everyone from newbies to IT experts.
+The [Script Verification](https://github.com/heyvaldemar/disable-inactive-users-active-directory/actions/workflows/verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and weekly: it parses the script, runs PSScriptAnalyzer at Error and Warning severity, checks that the comment-based help is present, and lints the workflow itself.
 
-## My Recommendations
+---
 
-📕 Check out my collection of [essential DevOps books](https://kit.co/heyvaldemar/essential-devops-books)\
-🖥️ Check out my [studio streaming and recording kit](https://kit.co/heyvaldemar/my-studio-streaming-and-recording-kit)\
-📡 Check out my [streaming starter kit](https://kit.co/heyvaldemar/streaming-starter-kit)
-
-## Follow Me
-
-🎬 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1)\
-🐦 [X / Twitter](https://twitter.com/heyvaldemar)\
-🎨 [Instagram](https://www.instagram.com/heyvaldemar/)\
-🐘 [Mastodon](https://mastodon.social/@heyvaldemar)\
-🧵 [Threads](https://www.threads.net/@heyvaldemar)\
-🎸 [Facebook](https://www.facebook.com/heyvaldemarFB/)\
-🧊 [Bluesky](https://bsky.app/profile/heyvaldemar.bsky.social)\
-🎥 [TikTok](https://www.tiktok.com/@heyvaldemar)\
-💻 [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)\
-📣 [daily.dev Squad](https://app.daily.dev/squads/devopscompass)\
-🧩 [LeetCode](https://leetcode.com/u/heyvaldemar/)\
-🐈 [GitHub](https://github.com/heyvaldemar)
-
-## Community of IT Experts
-
-👾 [Discord](https://discord.gg/AJQGCCBcqf)
-
-## Refill My Coffee Supplies
-
-💖 [PayPal](https://www.paypal.com/paypalme/heyvaldemarCOM)\
-🏆 [Patreon](https://www.patreon.com/heyvaldemar)\
-💎 [GitHub](https://github.com/sponsors/heyvaldemar)\
-🥤 [BuyMeaCoffee](https://www.buymeacoffee.com/heyvaldemar)\
-🍪 [Ko-fi](https://ko-fi.com/heyvaldemar)
-
-🌟 **Bitcoin (BTC):** bc1q2fq0k2lvdythdrj4ep20metjwnjuf7wccpckxc\
-🔹 **Ethereum (ETH):** 0x76C936F9366Fad39769CA5285b0Af1d975adacB8\
-🪙 **Binance Coin (BNB):** bnb1xnn6gg63lr2dgufngfr0lkq39kz8qltjt2v2g6\
-💠 **Litecoin (LTC):** LMGrhx8Jsx73h1pWY9FE8GB46nBytjvz8g
+## About the maintainer
 
 <div align="center">
 
-### Show some 💜 by starring some of the [repositories](https://github.com/heyValdemar?tab=repositories)!
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** · Docker Captain · IBM Champion · AWS Community Builder
 
-![octocat](https://user-images.githubusercontent.com/10498744/210113490-e2fad07f-4488-4da8-a656-b9abbdd8cb26.gif)
+[YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
 </div>
-
-![footer](https://user-images.githubusercontent.com/10498744/210157572-1fca0242-8af2-46a6-bfa3-666ffd40ebde.svg)
