@@ -1,0 +1,58 @@
+name: Something does not work
+description: The tool refuses to run, reports the wrong thing, or reports nothing when it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The most valuable report on a checking tool is the one where it stayed
+        quiet. If you believe it should have failed and did not, say what you
+        expected it to notice — that is the harder bug and the one worth
+        finding.
+
+  - type: input
+    id: version
+    attributes:
+      label: Which version
+      description: The tag, or `git rev-parse --short HEAD`.
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: What you ran, and how it is installed
+      description: The exact command, and whether it runs from a systemd timer, by hand, or somewhere else.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+      description: If it reported success on something that was broken, describe what was broken.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: The output, unedited
+      description: |
+        Including the timestamps. Redact passwords, hostnames and keys; leave
+        the rest, because the line that explains it is usually the one that
+        looked irrelevant.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: host
+    attributes:
+      label: Host
+      description: OS and version, and the docker version if the tool talks to docker.
+      placeholder: "Ubuntu 24.04, docker 28.1.1"
+    validations:
+      required: true
