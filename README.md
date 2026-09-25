@@ -1,6 +1,7 @@
 # Disable inactive Active Directory accounts
 
 [![Script Verification](https://github.com/heyvaldemar/disable-inactive-users-active-directory/actions/workflows/verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/disable-inactive-users-active-directory/actions/workflows/verification.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14902/badge)](https://www.bestpractices.dev/projects/14902)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Dormant accounts are the ones attackers like: nobody notices a login on an account nobody uses. This PowerShell script finds accounts that have not signed in for a given number of days, writes them to a CSV, disables them, stamps the date into the description, and moves them to a quarantine organizational unit.
