@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_(no unreleased changes yet)_
+
+## [1.1.0] - 2026-09-26
+
 ### Added
 
 - **Tests of what the script does, and proof that they can fail.** A Pester suite runs the script for real and asserts its behaviour; `tests/plant-violations.py` breaks it 7 ways on a copy and requires the suite to notice each. Both run in CI on every push.
