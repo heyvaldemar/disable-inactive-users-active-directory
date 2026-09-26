@@ -1,0 +1,8 @@
+# file	old	new	what the tests must notice
+"disable-inactive-users-active-directory.ps1"	"-and enabled -eq 'True'"	""	"disabled accounts included in the search"
+"disable-inactive-users-active-directory.ps1"	"(lastLogonTimestamp -lt $cutoffFileTime"	"(lastLogonTimestamp -gt $cutoffFileTime"	"recently active accounts taken instead of dormant ones"
+"disable-inactive-users-active-directory.ps1"	"if ($PSCmdlet.ShouldProcess($user.DistinguishedName"	"if ($true -or $PSCmdlet.ShouldProcess($user.DistinguishedName"	"-WhatIf ignored"
+"disable-inactive-users-active-directory.ps1"	"            Set-ADUser -Identity $user.DistinguishedName -Description $stamp\n"	""	"a disabled account left without the stamp that says why"
+"disable-inactive-users-active-directory.ps1"	"Write-Warning \"Could not process"	"throw \"Could not process"	"one account that cannot be changed stops the rest"
+"disable-inactive-users-active-directory.ps1"	"-Encoding UTF8 -WhatIf:$false"	"-Encoding UTF8"	"the dry run writes no report again"
+"disable-inactive-users-active-directory.ps1"	"[ValidateRange(1, 3650)]"	"[ValidateRange(0, 3650)]"	"-Days 0 accepted"

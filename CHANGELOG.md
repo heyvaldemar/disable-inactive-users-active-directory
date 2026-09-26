@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Added
+
+- **Tests of what the script does, and proof that they can fail.** A Pester suite runs the script for real and asserts its behaviour; `tests/plant-violations.py` breaks it 7 ways on a copy and requires the suite to notice each. Both run in CI on every push.
+
+### Fixed
+
+- **A dry run writes the report it says it wrote.** Under `-WhatIf` the script printed "N dormant account(s) written to <file>" and wrote nothing: `New-Item` and `Export-Csv` inherited the dry-run preference along with the account changes. The report is now written in every mode, and the account changes still honour `-WhatIf`. Found by the new test on the first run.
 
 ## [1.0.0] - 2026-09-03
 

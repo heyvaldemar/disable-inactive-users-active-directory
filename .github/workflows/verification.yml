@@ -54,6 +54,23 @@ jobs:
           if (-not $help.Synopsis) { Write-Output "::error::the script has no comment-based help"; exit 1 }
           Write-Output "Comment-based help present."
 
+  test:
+    name: Run the script against a real folder, and show the tests each violation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Pester
+        shell: pwsh
+        run: ./tests/run.ps1
+
+      # A test that cannot fail is not a test: each promise is broken on a
+      # copy of the script, and the run fails if the tests stay green.
+      - name: The tests, shown each violation they exist for
+        run: python3 tests/plant-violations.py -- pwsh -NoProfile -NonInteractive -File tests/run.ps1
+
   actionlint:
     name: Lint workflow YAML
     runs-on: ubuntu-latest

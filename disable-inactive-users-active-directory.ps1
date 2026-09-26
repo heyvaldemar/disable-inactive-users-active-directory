@@ -61,8 +61,12 @@ Import-Module ActiveDirectory
 $cutoff = (Get-Date).AddDays(-$Days)
 $cutoffFileTime = $cutoff.ToFileTime()
 
+# The report is written in every mode, -WhatIf included: a dry run is the run
+# that most needs it. Without -WhatIf:$false here both New-Item and
+# Export-Csv inherit the preference, write nothing, and the line below still
+# says the report was written.
 if (-not (Test-Path -LiteralPath $LogFolder)) {
-    New-Item -Path $LogFolder -ItemType Directory -Force | Out-Null
+    New-Item -Path $LogFolder -ItemType Directory -Force -WhatIf:$false | Out-Null
 }
 $logFile = Join-Path $LogFolder ("Disable-Inactive-Users_{0:yyyy-MM-dd_HH-mm-ss}.csv" -f (Get-Date))
 
@@ -76,7 +80,7 @@ $users = @(Get-ADUser -Filter $filter -SearchBase $SearchBase -Properties Displa
 $report = $users | Select-Object DisplayName, DistinguishedName, whenCreated, Description,
     @{ n = 'lastLogonDate'; e = { if ($_.lastLogonTimestamp) { [datetime]::FromFileTime($_.lastLogonTimestamp) } else { 'never' } } }
 
-$report | Export-Csv -LiteralPath $logFile -NoTypeInformation -Encoding UTF8
+$report | Export-Csv -LiteralPath $logFile -NoTypeInformation -Encoding UTF8 -WhatIf:$false
 Write-Output "$($users.Count) dormant account(s) written to $logFile"
 
 if ($users.Count -eq 0) { return }

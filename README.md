@@ -65,6 +65,17 @@ Both organizational units are mandatory on purpose. A script that disables accou
 
 The [Script Verification](https://github.com/heyvaldemar/disable-inactive-users-active-directory/actions/workflows/verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and weekly: it parses the script, runs PSScriptAnalyzer at Error and Warning severity, checks that the comment-based help is present, and lints the workflow itself.
 
+
+**What the script does is tested, not just parsed.** The [Pester](https://pester.dev/) suite in [`tests/`](tests/) runs the script against a stand-in `ActiveDirectory` module that records every change it would make, so it runs on any machine with PowerShell 7: the search asks only for enabled accounts idle longer than `-Days` below `-SearchBase`; `-WhatIf` changes nothing and still writes the report; every dormant account is disabled, stamped and moved, in that order; one account that cannot be changed does not stop the rest; nothing dormant means nothing changed; and `-Days 0` is refused. [`tests/plant-violations.py`](tests/plant-violations.py) then breaks those promises one at a time on a copy of the script, 7 ways listed in [`tests/plants.tsv`](tests/plants.tsv), and fails the run if the tests stay green through any of them. Both run in CI on every push.
+
+```powershell
+./tests/run.ps1
+```
+
+```bash
+python3 tests/plant-violations.py -- pwsh -NoProfile -NonInteractive -File tests/run.ps1
+```
+
 ---
 
 ## About the maintainer
